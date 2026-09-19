@@ -37,13 +37,18 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "sdk.dir=$ANDROID_HOME" > project/local.properties
 
+      - name: Inspecter le projet
+        run: |
+          echo "CONTENU DU ZIP :"
+          find project -maxdepth 5 -type f | sort | head -200
+
       - name: Compiler l'APK
         run: |
-          ROOT=$(dirname "$(find project -name gradlew -type f | head -1)")
-          echo "Projet trouvé : $ROOT"
-          chmod +x "$ROOT/gradlew"
-          cd "$ROOT"
-          ./gradlew assembleDebug --stacktrace
+          echo "Recherche de build.gradle..."
+          find project -name "build.gradle" -o -name "build.gradle.kts"
+
+          echo "Recherche de settings.gradle..."
+          find project -name "settings.gradle" -o -name "settings.gradle.kts"
 
       - name: Récupérer l'APK
         uses: actions/upload-artifact@v4
