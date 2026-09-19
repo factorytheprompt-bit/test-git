@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
-  
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -29,15 +29,17 @@ jobs:
       - name: Localiser le projet Gradle
         id: locate
         run: |
-          if [ -f "settings.gradle" ] || [ -f "settings.gradle.kts" ]; then
-            echo "dir=." >> "$GITHUB_OUTPUT"
-          elif [ -f "MonEpargne/settings.gradle" ] || [ -f "MonEpargne/settings.gradle.kts" ]; then
-            echo "dir=MonEpargne" >> "$GITHUB_OUTPUT"
-          else
-            echo "Impossible de trouver settings.gradle (ni à la racine, ni dans MonEpargne/)." >&2
-            find . -maxdepth 3 -name "settings.gradle*" >&2
+          echo "Contenu du dépôt (2 niveaux) :"
+          find . -maxdepth 2 -not -path "*/.git*"
+          echo "---"
+          FOUND=$(find . -maxdepth 4 \( -name "settings.gradle" -o -name "settings.gradle.kts" \) -not -path "*/.git/*" | head -n 1)
+          if [ -z "$FOUND" ]; then
+            echo "::error::Aucun settings.gradle trouvé dans le dépôt (recherche jusqu'à 4 niveaux)."
             exit 1
           fi
+          DIR=$(dirname "$FOUND")
+          echo "settings.gradle trouvé dans : $DIR"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
 
       - name: Compiler l'APK debug
         working-directory: ${{ steps.locate.outputs.dir }}
