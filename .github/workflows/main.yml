@@ -1,7 +1,5 @@
 name: Build APK
 
-# Se déclenche à chaque push sur main, à chaque pull request,
-# et manuellement depuis l'onglet "Actions" de GitHub (bouton "Run workflow").
 on:
   push:
     branches: [ "main" ]
@@ -23,27 +21,40 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # Le projet ne contient pas gradlew/gradle-wrapper.jar (fichier binaire).
-      # Cette action installe Gradle directement, donc "gradlew" n'est pas requis.
       - name: Installer Gradle 8.4
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.4
 
+      - name: Localiser le projet Gradle
+        id: locate
+        run: |
+          if [ -f "settings.gradle" ] || [ -f "settings.gradle.kts" ]; then
+            echo "dir=." >> "$GITHUB_OUTPUT"
+          elif [ -f "MonEpargne/settings.gradle" ] || [ -f "MonEpargne/settings.gradle.kts" ]; then
+            echo "dir=MonEpargne" >> "$GITHUB_OUTPUT"
+          else
+            echo "Impossible de trouver settings.gradle (ni à la racine, ni dans MonEpargne/)." >&2
+            find . -maxdepth 3 -name "settings.gradle*" >&2
+            exit 1
+          fi
+
       - name: Compiler l'APK debug
+        working-directory: ${{ steps.locate.outputs.dir }}
         run: gradle assembleDebug --no-daemon
 
       - name: Compiler l'APK release (non signé)
+        working-directory: ${{ steps.locate.outputs.dir }}
         run: gradle assembleRelease --no-daemon
 
       - name: Publier l'APK debug comme artefact téléchargeable
         uses: actions/upload-artifact@v4
         with:
           name: MonEpargne-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ steps.locate.outputs.dir }}/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Publier l'APK release comme artefact téléchargeable
         uses: actions/upload-artifact@v4
         with:
           name: MonEpargne-release-unsigned-apk
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          path: ${{ steps.locate.outputs.dir }}/app/build/outputs/apk/release/app-release-unsigned.apk
